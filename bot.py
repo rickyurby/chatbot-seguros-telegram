@@ -29,6 +29,12 @@ PDF_URLS = [
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('🤖 ¡Hola! Soy tu asistente de pólizas.')
 
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Maneja todos los errores no capturados"""
+    print(f"⚠️ Error global: {context.error}")
+    if update and update.message:
+        await update.message.reply_text("😔 Ocurrió un error procesando tu solicitud")
+
 def process_pdfs():
     texts = []
     for url in PDF_URLS:
