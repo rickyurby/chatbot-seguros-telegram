@@ -70,11 +70,12 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Configuración para Render
+    # Configuración definitiva para Render
     port = int(os.environ.get("PORT", 5000))
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
         webhook_url=f"https://tu-app-en-render.onrender.com/{TOKEN}",
-        secret_token="WEBHOOK_SECRET"  # Opcional pero recomendado
+        secret_token=os.getenv('WEBHOOK_SECRET'),
+        drop_pending_updates=True  # ¡Importante para evitar conflictos!
     )
