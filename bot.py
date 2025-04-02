@@ -135,11 +135,13 @@ async def main():
 if __name__ == "__main__":
     import asyncio
 
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    async def start():
+        await main()  # Llamamos a la función principal sin conflictos
 
-    loop.run_until_complete(main())  # Ejecutar el bot sin conflictos con Render
+    try:
+        asyncio.run(start())
+    except RuntimeError:
+        loop = asyncio.get_event_loop()
+        loop.create_task(start())
+
 
