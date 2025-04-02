@@ -92,11 +92,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error en mensaje: {e}")
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
+# Modifica la función register_webhook para logging detallado
 async def register_webhook(app: Application):
     """Registra el webhook verificando primero si es necesario"""
     try:
         current_webhook = await app.bot.get_webhook_info()
         webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
+        
+        logger.info(f"🔄 Current webhook URL: {current_webhook.url}")
+        logger.info(f"🆕 New webhook URL: {webhook_url}")
+        logger.info(f"🔒 Secret token set: {bool(os.getenv('WEBHOOK_SECRET'))}")
         
         if current_webhook.url != webhook_url:
             await app.bot.set_webhook(
@@ -108,8 +113,12 @@ async def register_webhook(app: Application):
             logger.info("✅ Webhook actualizado")
         else:
             logger.info("ℹ️ Webhook ya registrado")
+            
+        # Verificación adicional
+        updated_webhook = await app.bot.get_webhook_info()
+        logger.info(f"🔍 Webhook final state: {updated_webhook.url} | Pendientes: {updated_webhook.pending_update_count}")
     except Exception as e:
-        logger.error(f"❌ Error al registrar webhook: {e}")
+        logger.error(f"❌ Error al registrar webhook: {str(e)}")
         raise
 
 if __name__ == "__main__":
