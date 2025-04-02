@@ -136,9 +136,10 @@ if __name__ == "__main__":
     import asyncio
 
     try:
-        asyncio.run(main())  # Ejecutar sin interferir con event loop
+        loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.get_event_loop()
-        loop.create_task(main())  # Ejecutarlo sin bloquear
-        loop.run_forever()  # Mantener el bot activo
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(main())  # Ejecutar el bot sin conflictos con Render
 
