@@ -1,0 +1,6 @@
+python-telegram-bot==20.3
+langchain==0.0.346
+pypdf==3.17.0
+openai==0.28.0
+python-dotenv==1.0.0
+faiss-cpu==1.7.4  # Solo si usas FAISS localmente
