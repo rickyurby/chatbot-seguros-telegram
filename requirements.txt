@@ -1,8 +1,7 @@
-python-telegram-bot[webhooks]==20.3
-python-dotenv==1.0.0
-langchain==0.0.346
-pypdf==3.17.0
-openai==0.28.0
-faiss-cpu==1.7.4
-requests==2.31.0
-langchain-community>=0.0.20
+langchain-core>=0.1.21,<0.2
+langchain-community>=0.0.20,<0.1
+python-telegram-bot==20.3
+openai>=0.28.0
+pypdf>=3.17.0
+python-dotenv>=1.0.0
+faiss-cpu>=1.7.4
