@@ -90,29 +90,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
-    # Configuración avanzada del logger
-    logger = logging.getLogger(__name__)
+    # Configuración del webhook una sola vez
+    port = int(os.environ.get("PORT", 5000))
+    webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
     
-    try:
-        port = int(os.environ.get("PORT", 5000))
-        app = Application.builder().token(TOKEN).build()
-        
-        # Registra handlers
-        app.add_error_handler(error_handler)
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        
-        logger.info(f"🚀 Iniciando bot en puerto {port}")
-        
-        # Configuración mejorada del webhook
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=port,
-            webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
+    app = Application.builder().token(TOKEN).post_init(register_webhook).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    async def register_webhook(_):
+        await app.bot.set_webhook(
+            url=webhook_url,
             secret_token=os.getenv('WEBHOOK_SECRET'),
-            drop_pending_updates=True,
-            allowed_updates=Update.ALL_TYPES
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
         )
-    except Exception as e:
-        logger.error(f"💥 Error crítico: {e}")
-        raise
+        logger.info(f"✅ Webhook registrado permanentemente en {webhook_url}")
+    
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        webhook_url=webhook_url,
+        secret_token=os.getenv('WEBHOOK_SECRET')
+    )
