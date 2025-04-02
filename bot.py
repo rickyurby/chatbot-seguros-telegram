@@ -17,9 +17,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Lista de URLs de los PDFs en Google Drive (públicos)
 PDF_URLS = [
-    "https://drive.google.com/uc?export=download&id=ID_DEL_PDF_1",
-    "https://drive.google.com/uc?export=download&id=ID_DEL_PDF_2",
-    "https://drive.google.com/uc?export=download&id=ID_DEL_PDF_3"
+    "https://drive.google.com/file/d/1AAqvlCYUVYxl5iRPTjCkRVcDRTFjpzq2/view?usp=drive_link",
+    "https://drive.google.com/file/d/1pFMjFmS-xlj9awXfXc3qc8Dh0xNv13cx/view?usp=drive_link",
+    "https://drive.google.com/file/d/1jviAI9BUkgVsb0dDQGvmZNXlFpVdMmxy/view?usp=drive_link"
 ]
 
 def download_pdfs():
