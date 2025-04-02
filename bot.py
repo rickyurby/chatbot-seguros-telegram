@@ -1,41 +1,43 @@
-import os
-import requests
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    ContextTypes
+)
 from pypdf import PdfReader
+import requests
+import os
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
-from dotenv import load_dotenv
 
-# Configuración inicial
+# Configuración
 load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 
-# URLs de los PDFs en Google Drive (reemplaza con tus IDs)
 PDF_URLS = [
-    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_1",
-    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_2"
+    "https://drive.google.com/file/d/1AAqvlCYUVYxl5iRPTjCkRVcDRTFjpzq2/view?usp=drive_link",
+    "https://drive.google.com/file/d/1pFMjFmS-xlj9awXfXc3qc8Dh0xNv13cx/view?usp=drive_link",
+    "https://drive.google.com/file/d/1jviAI9BUkgVsb0dDQGvmZNXlFpVdMmxy/view?usp=drive_link"
 ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('🔍 Hola! Soy tu asistente de pólizas. Envíame tu pregunta sobre los documentos.')
+    await update.message.reply_text('🤖 ¡Hola! Soy tu asistente de pólizas. Pregúntame lo que necesites.')
 
 def process_pdfs():
-    """Descarga y procesa los PDFs para crear la base de conocimiento"""
     texts = []
     for url in PDF_URLS:
         response = requests.get(url)
         with open("temp.pdf", "wb") as f:
             f.write(response.content)
         reader = PdfReader("temp.pdf")
-        for page in reader.pages:
-            texts.append(page.extract_text())
+        texts.extend(page.extract_text() for page in reader.pages if page.extract_text())
     
-    # Procesamiento con LangChain
     text_splitter = CharacterTextSplitter(
         separator="\n",
         chunk_size=1000,
@@ -44,34 +46,23 @@ def process_pdfs():
     )
     chunks = text_splitter.split_text("\n".join(texts))
     embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_KEY)
-    knowledge_base = FAISS.from_texts(chunks, embeddings)
-    return knowledge_base
+    return FAISS.from_texts(chunks, embeddings)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        user_question = update.message.text
         knowledge_base = process_pdfs()
-        
-        docs = knowledge_base.similarity_search(user_question)
+        docs = knowledge_base.similarity_search(update.message.text)
         llm = OpenAI(openai_api_key=OPENAI_KEY, temperature=0)
-        chain = load_qa_chain(llm, chain_type="stuff")
-        response = chain.run(input_documents=docs, question=user_question)
-        
-        await update.message.reply_text(f"📄 Respuesta:\n{response}")
+        response = load_qa_chain(llm, chain_type="stuff").run(
+            input_documents=docs, 
+            question=update.message.text
+        )
+        await update.message.reply_text(f"📄 Respuesta:\n{response[:4000]}...")  # Limita a 4000 caracteres
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {str(e)}")
-
-def main():
-    # Configuración del bot
-    app = Application.builder().token(TOKEN).build()
-    
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Iniciar bot
-    print("Bot en ejecución...")
-    app.run_polling()
+        await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
