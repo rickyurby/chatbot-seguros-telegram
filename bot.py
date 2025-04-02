@@ -90,23 +90,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
-    # Configuración del webhook una sola vez
     port = int(os.environ.get("PORT", 5000))
     webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
-    
-    app = Application.builder().token(TOKEN).post_init(register_webhook).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    async def register_webhook(_):
+
+    # Primero definimos la función de registro
+    async def register_webhook(app: Application):
         await app.bot.set_webhook(
             url=webhook_url,
             secret_token=os.getenv('WEBHOOK_SECRET'),
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
         )
-        logger.info(f"✅ Webhook registrado permanentemente en {webhook_url}")
-    
+        logger.info(f"✅ Webhook registrado en: {webhook_url}")
+
+    # Luego construimos la aplicación
+    app = Application.builder() \
+        .token(TOKEN) \
+        .post_init(register_webhook) \
+        .build()
+
+    # Handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    # Iniciamos el webhook
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
