@@ -34,13 +34,17 @@ def process_pdfs():
     for url in PDF_URLS:
         try:
             response = requests.get(url, timeout=10)
+            response.raise_for_status()  # Verifica errores HTTP
             with open("temp.pdf", "wb") as f:
                 f.write(response.content)
             reader = PdfReader("temp.pdf")
             texts.extend(page.extract_text() or "" for page in reader.pages)
         except Exception as e:
-            print(f"Error procesando PDF: {e}")
+            print(f"Error procesando PDF {url}: {e}")
             continue
+        finally:
+            if os.path.exists("temp.pdf"):
+                os.remove("temp.pdf")  # Limpieza
     
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -63,19 +67,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(response[:4000])
     except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
+        await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
+    print(f"🔑 Webhook configurado en: {os.getenv('WEBHOOK_SECRET', '')[:3]}...")
+    print(f"🌐 URL pública: https://{os.getenv('RENDER_APP_NAME', '')}.onrender.com")
+    
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Configuración definitiva para Render
+    # Configuración definitiva para Render (CORREGIDO: añadí la coma faltante)
     port = int(os.environ.get("PORT", 5000))
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
-        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
+        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",  # Coma añadida aquí
         secret_token=os.getenv('WEBHOOK_SECRET'),
-        drop_pending_updates=True  # ¡Importante para evitar conflictos!
+        drop_pending_updates=True
     )
