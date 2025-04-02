@@ -1,8 +1,8 @@
-langchain>=0.0.348,<0.1
-langchain-community
+langchain>=0.1
+langchain-community>=0.0.29
 langchain-text-splitters
 openai
 python-dotenv
 requests
 pypdf
-python-telegram-bot
+python-telegram-bot[webhooks]
