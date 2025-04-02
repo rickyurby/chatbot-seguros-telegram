@@ -1,7 +1,7 @@
 import os
 import requests
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from pypdf import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -10,32 +10,32 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 from dotenv import load_dotenv
 
-# Cargar variables de entorno (para el token de Telegram y OpenAI)
+# Configuración inicial
 load_dotenv()
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TOKEN = os.getenv('TELEGRAM_TOKEN')
+OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 
-# Lista de URLs de los PDFs en Google Drive (públicos)
+# URLs de los PDFs en Google Drive (reemplaza con tus IDs)
 PDF_URLS = [
-    "https://drive.google.com/file/d/1AAqvlCYUVYxl5iRPTjCkRVcDRTFjpzq2/view?usp=drive_link",
-    "https://drive.google.com/file/d/1pFMjFmS-xlj9awXfXc3qc8Dh0xNv13cx/view?usp=drive_link",
-    "https://drive.google.com/file/d/1jviAI9BUkgVsb0dDQGvmZNXlFpVdMmxy/view?usp=drive_link"
+    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_1",
+    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_2"
 ]
 
-def download_pdfs():
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('🔍 Hola! Soy tu asistente de pólizas. Envíame tu pregunta sobre los documentos.')
+
+def process_pdfs():
+    """Descarga y procesa los PDFs para crear la base de conocimiento"""
     texts = []
     for url in PDF_URLS:
         response = requests.get(url)
         with open("temp.pdf", "wb") as f:
             f.write(response.content)
-        pdf_reader = PdfReader("temp.pdf")
-        for page in pdf_reader.pages:
+        reader = PdfReader("temp.pdf")
+        for page in reader.pages:
             texts.append(page.extract_text())
-    os.remove("temp.pdf")
-    return texts
-
-def setup_knowledge_base():
-    texts = download_pdfs()
+    
+    # Procesamiento con LangChain
     text_splitter = CharacterTextSplitter(
         separator="\n",
         chunk_size=1000,
@@ -43,29 +43,35 @@ def setup_knowledge_base():
         length_function=len
     )
     chunks = text_splitter.split_text("\n".join(texts))
-    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+    embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_KEY)
     knowledge_base = FAISS.from_texts(chunks, embeddings)
     return knowledge_base
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text('¡Hola! Soy tu asistente de pólizas. Envíame tu pregunta.')
-
-def handle_message(update: Update, context: CallbackContext):
-    user_question = update.message.text
-    knowledge_base = setup_knowledge_base()
-    docs = knowledge_base.similarity_search(user_question)
-    llm = OpenAI(openai_api_key=OPENAI_API_KEY)
-    chain = load_qa_chain(llm, chain_type="stuff")
-    response = chain.run(input_documents=docs, question=user_question)
-    update.message.reply_text(response)
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        user_question = update.message.text
+        knowledge_base = process_pdfs()
+        
+        docs = knowledge_base.similarity_search(user_question)
+        llm = OpenAI(openai_api_key=OPENAI_KEY, temperature=0)
+        chain = load_qa_chain(llm, chain_type="stuff")
+        response = chain.run(input_documents=docs, question=user_question)
+        
+        await update.message.reply_text(f"📄 Respuesta:\n{response}")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {str(e)}")
 
 def main():
-    updater = Updater(TELEGRAM_TOKEN)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(filters.TEXT & ~Filters.command, handle_message))
-    updater.start_polling()
-    updater.idle()
+    # Configuración del bot
+    app = Application.builder().token(TOKEN).build()
+    
+    # Handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # Iniciar bot
+    print("Bot en ejecución...")
+    app.run_polling()
 
 if __name__ == "__main__":
     main()

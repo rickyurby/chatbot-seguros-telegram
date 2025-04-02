@@ -1,4 +1,4 @@
-python-telegram-bot==20.3
+python-telegram-bot==13.7  # Versión estable con la sintaxis antigua
 langchain==0.0.346
 pypdf==3.17.0
 openai==0.28.0
