@@ -92,29 +92,36 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error en mensaje: {e}")
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
+# ... (mantén todas las importaciones y configuraciones anteriores hasta register_webhook)
+
 async def register_webhook(app: Application):
-    """Registra el webhook con la configuración correcta para Render"""
+    """Registra el webhook de manera más robusta"""
     try:
         webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/webhook"
+        secret_token = os.getenv('WEBHOOK_SECRET')
         
-        await app.bot.set_webhook(
-            url=webhook_url,
-            secret_token=os.getenv('WEBHOOK_SECRET'),
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-        logger.info(f"✅ Webhook configurado en {webhook_url}")
+        # Verificamos el webhook actual primero
+        current_info = await app.bot.get_webhook_info()
+        logger.info(f"ℹ️ Webhook actual: {current_info.url} | Pendientes: {current_info.pending_update_count}")
         
-        # Verificación final
-        current_webhook = await app.bot.get_webhook_info()
-        logger.info(f"🔍 Estado final del webhook: {current_webhook.url} | Pendientes: {current_webhook.pending_update_count}")
+        if current_info.url != webhook_url:
+            logger.info("🔄 Configurando nuevo webhook...")
+            await asyncio.sleep(1)  # Prevención de flood control
+            await app.bot.set_webhook(
+                url=webhook_url,
+                secret_token=secret_token,
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
+            logger.info(f"✅ Webhook configurado en {webhook_url}")
+        else:
+            logger.info("ℹ️ Webhook ya estaba configurado correctamente")
+            
     except Exception as e:
-        logger.error(f"❌ Error al registrar webhook: {str(e)}")
+        logger.error(f"❌ Error crítico al configurar webhook: {str(e)}")
         raise
 
-async def health_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Endpoint de verificación de salud"""
-    await update.message.reply_text("✅ Bot en funcionamiento")
+# ... (mantén el resto de funciones igual hasta el main)
 
 if __name__ == "__main__":
     try:
@@ -133,14 +140,15 @@ if __name__ == "__main__":
         
         logger.info(f"🚀 Iniciando aplicación en puerto {port}...")
         
-        # Configuración específica para Render
+        # Configuración optimizada para Render
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
             webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/webhook",
             secret_token=os.getenv('WEBHOOK_SECRET'),
             cert=None,
-            drop_pending_updates=True
+            drop_pending_updates=True,
+            stop_signals=[]  # Importante para Render
         )
     except Exception as e:
         logger.critical(f"💥 Error fatal: {e}")
