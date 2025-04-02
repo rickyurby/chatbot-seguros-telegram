@@ -12,10 +12,10 @@ from telegram.ext import (
     ContextTypes
 )
 from pypdf import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain_text_splitters import CharacterTextSplitter  # Cambiado
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains import load_qa_chain
+from langchain_community.chains import load_qa_chain  # Cambiado
 from langchain_community.llms import OpenAI
 
 # Configuración inicial
