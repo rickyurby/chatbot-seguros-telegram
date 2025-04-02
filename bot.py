@@ -44,6 +44,12 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update and update.message:
         await update.message.reply_text("😔 Ocurrió un error procesando tu solicitud")
 
+async def health_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Endpoint de verificación de salud del bot"""
+    await update.message.reply_text("✅ El bot está funcionando correctamente")
+    logger.info("Health check realizado")
+    
+
 def process_pdfs():
     texts = []
     for i, url in enumerate(PDF_URLS):
@@ -134,22 +140,21 @@ if __name__ == "__main__":
         
         # Handlers
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("health", health_check))
+        app.add_handler(CommandHandler("health", health_check))  # Ahora la función existe
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         app.add_error_handler(error_handler)
         
         logger.info(f"🚀 Iniciando aplicación en puerto {port}...")
         
-        # Configuración optimizada para Render
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
             webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/webhook",
             secret_token=os.getenv('WEBHOOK_SECRET'),
             cert=None,
-            drop_pending_updates=True,
-            stop_signals=[]  # Importante para Render
+            drop_pending_updates=True
         )
     except Exception as e:
         logger.critical(f"💥 Error fatal: {e}")
+        # Intenta enviar un mensaje de error al administrador si es posible
         raise
