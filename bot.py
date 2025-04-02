@@ -1,4 +1,4 @@
-from dotenv import load_dotenv  # Nueva importación crítica
+from dotenv import load_dotenv
 import os
 import requests
 from telegram import Update
@@ -16,8 +16,7 @@ from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 
-# Cargar variables de entorno
-load_dotenv()  # Ahora funcionará correctamente
+load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 
@@ -28,16 +27,20 @@ PDF_URLS = [
 ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('🤖 ¡Hola! Soy tu asistente de pólizas. Pregúntame lo que necesites.')
+    await update.message.reply_text('🤖 ¡Hola! Soy tu asistente de pólizas.')
 
 def process_pdfs():
     texts = []
     for url in PDF_URLS:
-        response = requests.get(url)
-        with open("temp.pdf", "wb") as f:
-            f.write(response.content)
-        reader = PdfReader("temp.pdf")
-        texts.extend(page.extract_text() for page in reader.pages if page.extract_text())
+        try:
+            response = requests.get(url, timeout=10)
+            with open("temp.pdf", "wb") as f:
+                f.write(response.content)
+            reader = PdfReader("temp.pdf")
+            texts.extend(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            print(f"Error procesando PDF: {e}")
+            continue
     
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -58,20 +61,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             input_documents=docs, 
             question=update.message.text
         )
-        await update.message.reply_text(f"📄 Respuesta:\n{response[:4000]}...")
+        await update.message.reply_text(response[:4000])
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Error: {str(e)}")
+        await update.message.reply_text(f"Error: {str(e)}")
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))  # Puerto para Render
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Configuración especial para Render
+    # Configuración para Render
+    port = int(os.environ.get("PORT", 5000))
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
-        url_path=TOKEN,
-        webhook_url=f"https://your-render-app-name.onrender.com/{TOKEN}"
+        webhook_url=f"https://tu-app-en-render.onrender.com/{TOKEN}",
+        secret_token="WEBHOOK_SECRET"  # Opcional pero recomendado
     )
