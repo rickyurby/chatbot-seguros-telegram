@@ -98,7 +98,6 @@ async def register_webhook(app: Application):
         current_webhook = await app.bot.get_webhook_info()
         webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
         
-        # Solo registrar el webhook si la URL no coincide
         if current_webhook.url != webhook_url:
             await app.bot.set_webhook(
                 url=webhook_url,
@@ -106,50 +105,33 @@ async def register_webhook(app: Application):
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True
             )
-            logger.info(f"✅ Webhook registrado en: {webhook_url}")
+            logger.info("✅ Webhook actualizado")
         else:
-            logger.info("ℹ️ Webhook ya está configurado correctamente, no se necesita registrar nuevamente.")
+            logger.info("ℹ️ Webhook ya registrado")
     except Exception as e:
         logger.error(f"❌ Error al registrar webhook: {e}")
         raise
 
-
-# ... (el resto de tu código permanece igual)
-
-async def main():
-    """Función principal para iniciar la app y registrar webhook"""
-    app = Application.builder().token(TOKEN).build()
-
-    await register_webhook(app)  # Solo registrar si es necesario
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    
+    app = Application.builder() \
+        .token(TOKEN) \
+        .post_init(register_webhook) \
+        .build()
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_error_handler(error_handler)
-
-    logger.info("🚀 Iniciando aplicación...")
-    await app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
-        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
-        secret_token=os.getenv('WEBHOOK_SECRET')
-    )
-
-if __name__ == "__main__":
+    
     try:
-        # Creamos una nueva política de event loop
-        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
-        
-        # Obtenemos o creamos un event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Ejecutamos la aplicación principal
-        loop.run_until_complete(main())
-        
-    except KeyboardInterrupt:
-        logger.info("🛑 Aplicación detenida por el usuario")
+        logger.info("🚀 Iniciando aplicación...")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
+            secret_token=os.getenv('WEBHOOK_SECRET')
+        )
     except Exception as e:
-        logger.error(f"❌ Error fatal: {e}")
-    finally:
-        # Cerramos el event loop correctamente
-        loop.close()
+        logger.critical(f"💥 Error fatal: {e}")
+        raise
