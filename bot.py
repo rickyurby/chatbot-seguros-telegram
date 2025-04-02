@@ -114,6 +114,8 @@ async def register_webhook(app: Application):
         raise
 
 
+# ... (el resto de tu código permanece igual)
+
 async def main():
     """Función principal para iniciar la app y registrar webhook"""
     app = Application.builder().token(TOKEN).build()
@@ -133,15 +135,10 @@ async def main():
     )
 
 if __name__ == "__main__":
-    import asyncio
-
-    async def start():
-        await main()  # Llamamos a la función principal sin conflictos
-
     try:
-        asyncio.run(start())
-    except RuntimeError:
-        loop = asyncio.get_event_loop()
-        loop.create_task(start())
-
-
+        # Ejecución simple sin complicaciones con el event loop
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("🛑 Aplicación detenida por el usuario")
+    except Exception as e:
+        logger.error(f"❌ Error fatal: {e}")
