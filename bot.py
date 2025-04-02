@@ -1,3 +1,4 @@
+# Importaciones corregidas
 from dotenv import load_dotenv
 import os
 import requests
@@ -12,10 +13,10 @@ from telegram.ext import (
     ContextTypes
 )
 from pypdf import PdfReader
-from langchain_text_splitters import CharacterTextSplitter  # Cambiado
+from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.chains import load_qa_chain  # Cambiado
+from langchain.chains import load_qa_chain  # Esta es la ubicación correcta
 from langchain_community.llms import OpenAI
 
 # Configuración inicial
