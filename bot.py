@@ -22,8 +22,9 @@ TOKEN = os.getenv('TELEGRAM_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 
 PDF_URLS = [
-    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_1",
-    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_2"
+    "https://drive.google.com/uc?export=download&id=1AAqvlCYUVYxl5iRPTjCkRVcDRTFjpzq2",
+    "https://drive.google.com/uc?export=download&id=1pFMjFmS-xlj9awXfXc3qc8Dh0xNv13cx",
+    "https://drive.google.com/uc?export=download&id=1jviAI9BUkgVsb0dDQGvmZNXlFpVdMmxy"
 ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,7 +63,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 5000))  # Puerto para Render
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+    
+    # Configuración especial para Render
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path=TOKEN,
+        webhook_url=f"https://your-render-app-name.onrender.com/{TOKEN}"
+    )
