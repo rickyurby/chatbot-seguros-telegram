@@ -1,5 +1,5 @@
-langchain>=0.0.348,<0.1
-langchain-community
+langchain==0.0.348
+langchain-community==0.0.17
 langchain-text-splitters
 openai
 python-dotenv
