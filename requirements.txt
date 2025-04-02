@@ -1,8 +1,7 @@
-python-telegram-bot[webhooks]==20.3  # Versión con soporte para webhooks
+python-telegram-bot[webhooks]==20.3
 python-dotenv==1.0.0
 langchain==0.0.346
 pypdf==3.17.0
 openai==0.28.0
 faiss-cpu==1.7.4
 requests==2.31.0
-gunicorn==20.1.0
