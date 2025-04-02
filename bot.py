@@ -75,6 +75,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
+    print(f"🔑 Webhook configurado en: {os.getenv('WEBHOOK_SECRET', '')[:3]}...")
+    print(f"🌐 URL pública: https://{os.getenv('RENDER_APP_NAME', '')}.onrender.com")
+    
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -86,6 +89,5 @@ if __name__ == "__main__":
         port=port,
         webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
         secret_token=os.getenv('WEBHOOK_SECRET'),
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES  # Este parámetro sí es válido
+        drop_pending_updates=True
     )
