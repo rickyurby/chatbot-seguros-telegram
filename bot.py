@@ -114,26 +114,23 @@ async def register_webhook(app: Application):
         raise
 
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    
-    app = Application.builder() \
-        .token(TOKEN) \
-        .post_init(register_webhook) \
-        .build()
-    
+async def main():
+    """Función principal para iniciar la app y registrar webhook"""
+    app = Application.builder().token(TOKEN).build()
+
+    await register_webhook(app)  # Solo registrar si es necesario
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_error_handler(error_handler)
-    
-    try:
-        logger.info("🚀 Iniciando aplicación...")
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=port,
-            webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
-            secret_token=os.getenv('WEBHOOK_SECRET')
-        )
-    except Exception as e:
-        logger.critical(f"💥 Error fatal: {e}")
-        raise
+
+    logger.info("🚀 Iniciando aplicación...")
+    await app.run_webhook(
+        listen="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
+        secret_token=os.getenv('WEBHOOK_SECRET')
+    )
+
+if __name__ == "__main__":
+    asyncio.run(main())  # Ejecutar la app con asyncio
