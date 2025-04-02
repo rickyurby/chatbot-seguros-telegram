@@ -33,18 +33,23 @@ def process_pdfs():
     texts = []
     for url in PDF_URLS:
         try:
+            # Añade timeout y verificación SSL
             response = requests.get(url, timeout=30, verify=True)
-            response.raise_for_status()  # Verifica errores HTTP
+            response.raise_for_status()
+            
+            # Procesamiento más rápido con chunks
             with open("temp.pdf", "wb") as f:
-                f.write(response.content)
+                for chunk in response.iter_content(1024):
+                    f.write(chunk)
+                    
             reader = PdfReader("temp.pdf")
-            texts.extend(page.extract_text() or "" for page in reader.pages)
+            texts.extend(page.extract_text() or "" for page in reader.pages[:50])  # Limita páginas
         except Exception as e:
-            print(f"Error procesando PDF {url}: {e}")
+            print(f"Error procesando {url}: {str(e)}")
             continue
         finally:
             if os.path.exists("temp.pdf"):
-                os.remove("temp.pdf")  # Limpieza
+                os.remove("temp.pdf")
     
     text_splitter = CharacterTextSplitter(
         separator="\n",
