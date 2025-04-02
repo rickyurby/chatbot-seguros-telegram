@@ -1,6 +1,7 @@
-langchain-core==0.1.33
-langchain-community==0.0.28
-langchain==0.0.348
+# requirements.txt actualizado
+langchain==0.0.339
+langchain-community==0.0.27
+langchain-core==0.0.30
 python-telegram-bot==20.6
 openai==1.12.0
 pypdf==3.17.0
@@ -9,4 +10,3 @@ faiss-cpu==1.7.4
 requests==2.31.0
 httpx==0.26.0
 numpy==1.26.4
-typing-extensions==4.9.0
