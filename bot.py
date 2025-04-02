@@ -75,7 +75,7 @@ if __name__ == "__main__":
     app.run_webhook(
         listen="0.0.0.0",
         port=port,
-        webhook_url=f"https://tu-app-en-render.onrender.com/{TOKEN}",
+        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
         secret_token=os.getenv('WEBHOOK_SECRET'),
         drop_pending_updates=True  # ¡Importante para evitar conflictos!
     )
