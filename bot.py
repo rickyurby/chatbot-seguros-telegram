@@ -133,9 +133,12 @@ async def main():
     )
 
 if __name__ == "__main__":
-    import sys
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    import asyncio
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())  # Ejecutar sin `asyncio.run()
+    try:
+        asyncio.run(main())  # Ejecutar sin interferir con event loop
+    except RuntimeError:
+        loop = asyncio.get_event_loop()
+        loop.create_task(main())  # Ejecutarlo sin bloquear
+        loop.run_forever()  # Mantener el bot activo
+
