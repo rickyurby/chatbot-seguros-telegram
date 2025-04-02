@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 import os
 import requests
+import asyncio
+import logging
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -16,11 +18,12 @@ from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 
-import logging
+# Configuración inicial
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -37,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja todos los errores no capturados"""
-    print(f"⚠️ Error global: {context.error}")
+    logger.error(f"⚠️ Error global: {context.error}")
     if update and update.message:
         await update.message.reply_text("😔 Ocurrió un error procesando tu solicitud")
 
@@ -46,12 +49,12 @@ def process_pdfs():
     for i, url in enumerate(PDF_URLS):
         try:
             logger.info(f"📄 Procesando PDF {i+1}/{len(PDF_URLS)}")
-            response = requests.get(url, timeout=60)  # Aumenta timeout
+            response = requests.get(url, timeout=60)
             with open(f"temp_{i}.pdf", "wb") as f:
                 f.write(response.content)
                 
             reader = PdfReader(f"temp_{i}.pdf")
-            for page in reader.pages[:20]:  # Limita a 20 páginas por PDF
+            for page in reader.pages[:20]:
                 if text := page.extract_text():
                     texts.append(text)
                     
@@ -63,8 +66,6 @@ def process_pdfs():
     
     if not texts:
         raise ValueError("No se pudo procesar ningún PDF")
-    
-    # Resto del código igual...
     
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -78,6 +79,7 @@ def process_pdfs():
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        await update.message.reply_chat_action("typing")
         knowledge_base = process_pdfs()
         docs = knowledge_base.similarity_search(update.message.text)
         llm = OpenAI(openai_api_key=OPENAI_KEY, temperature=0)
@@ -87,53 +89,49 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await update.message.reply_text(response[:4000])
     except Exception as e:
+        logger.error(f"Error en mensaje: {e}")
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
-if __name__ == "__main__":
-    # Configura logging (asegúrate de tener esto al inicio del archivo)
-    import logging
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
-    logger = logging.getLogger(__name__)
-
-    port = int(os.environ.get("PORT", 5000))
-    webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
-
-    async def register_webhook(app: Application):
-        """Función para registrar el webhook una sola vez"""
-        try:
+async def register_webhook(app: Application):
+    """Registra el webhook verificando primero si es necesario"""
+    try:
+        current_webhook = await app.bot.get_webhook_info()
+        webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
+        
+        if current_webhook.url != webhook_url:
             await app.bot.set_webhook(
                 url=webhook_url,
                 secret_token=os.getenv('WEBHOOK_SECRET'),
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True
             )
-            logging.info(f"✅ Webhook registrado en: {webhook_url}")
-        except Exception as e:
-            logging.error(f"❌ Error al registrar webhook: {e}")
-            raise
+            logger.info("✅ Webhook actualizado")
+        else:
+            logger.info("ℹ️ Webhook ya registrado")
+    except Exception as e:
+        logger.error(f"❌ Error al registrar webhook: {e}")
+        raise
 
-    # Construye la aplicación
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    
     app = Application.builder() \
         .token(TOKEN) \
         .post_init(register_webhook) \
         .build()
-
-    # Registra handlers
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Inicia el servicio
+    app.add_error_handler(error_handler)
+    
     try:
-        logging.info("🚀 Iniciando aplicación...")
+        logger.info("🚀 Iniciando aplicación...")
         app.run_webhook(
             listen="0.0.0.0",
             port=port,
-            webhook_url=webhook_url,
+            webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
             secret_token=os.getenv('WEBHOOK_SECRET')
         )
     except Exception as e:
-        logging.critical(f"💥 Error fatal: {e}")
+        logger.critical(f"💥 Error fatal: {e}")
         raise
