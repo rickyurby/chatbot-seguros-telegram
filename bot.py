@@ -1,4 +1,3 @@
-# Importaciones corregidas
 from dotenv import load_dotenv
 import os
 import requests
@@ -16,8 +15,8 @@ from pypdf import PdfReader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains import load_qa_chain  # Esta es la ubicación correcta
-from langchain_community.llms import OpenAI
+from langchain.chains.qa_with_sources import load_qa_with_sources_chain  # Cambiado
+from langchain_community.chat_models import ChatOpenAI  # Cambiado
 
 # Configuración inicial
 logging.basicConfig(
@@ -40,16 +39,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('🤖 ¡Hola! Soy tu asistente de pólizas.')
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Maneja todos los errores no capturados"""
     logger.error(f"⚠️ Error global: {context.error}")
     if update and update.message:
         await update.message.reply_text("😔 Ocurrió un error procesando tu solicitud")
 
 async def health_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Endpoint de verificación de salud del bot"""
     await update.message.reply_text("✅ El bot está funcionando correctamente")
     logger.info("Health check realizado")
-    
 
 def process_pdfs():
     texts = []
@@ -89,31 +85,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_chat_action("typing")
         knowledge_base = process_pdfs()
         docs = knowledge_base.similarity_search(update.message.text)
-        llm = OpenAI(openai_api_key=OPENAI_KEY, temperature=0)
-        response = load_qa_chain(llm, chain_type="stuff").run(
-            input_documents=docs, 
-            question=update.message.text
-        )
-        await update.message.reply_text(response[:4000])
+        llm = ChatOpenAI(openai_api_key=OPENAI_KEY, temperature=0)  # Cambiado
+        chain = load_qa_with_sources_chain(llm, chain_type="stuff")  # Cambiado
+        response = chain({"input_documents": docs, "question": update.message.text})  # Cambiado
+        await update.message.reply_text(response['output_text'][:4000])  # Cambiado
     except Exception as e:
         logger.error(f"Error en mensaje: {e}")
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
-# ... (mantén todas las importaciones y configuraciones anteriores hasta register_webhook)
-
 async def register_webhook(app: Application):
-    """Registra el webhook de manera más robusta"""
     try:
         webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/webhook"
         secret_token = os.getenv('WEBHOOK_SECRET')
         
-        # Verificamos el webhook actual primero
         current_info = await app.bot.get_webhook_info()
         logger.info(f"ℹ️ Webhook actual: {current_info.url} | Pendientes: {current_info.pending_update_count}")
         
         if current_info.url != webhook_url:
             logger.info("🔄 Configurando nuevo webhook...")
-            await asyncio.sleep(1)  # Prevención de flood control
+            await asyncio.sleep(1)
             await app.bot.set_webhook(
                 url=webhook_url,
                 secret_token=secret_token,
@@ -128,8 +118,6 @@ async def register_webhook(app: Application):
         logger.error(f"❌ Error crítico al configurar webhook: {str(e)}")
         raise
 
-# ... (mantén el resto de funciones igual hasta el main)
-
 if __name__ == "__main__":
     try:
         port = int(os.environ.get("PORT", 10000))
@@ -139,9 +127,8 @@ if __name__ == "__main__":
             .post_init(register_webhook) \
             .build()
         
-        # Handlers
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(CommandHandler("health", health_check))  # Ahora la función existe
+        app.add_handler(CommandHandler("health", health_check))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         app.add_error_handler(error_handler)
         
@@ -157,5 +144,4 @@ if __name__ == "__main__":
         )
     except Exception as e:
         logger.critical(f"💥 Error fatal: {e}")
-        # Intenta enviar un mensaje de error al administrador si es posible
         raise
