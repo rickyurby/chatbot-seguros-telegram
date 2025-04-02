@@ -80,9 +80,11 @@ if __name__ == "__main__":
     # Configuración definitiva para Render (CORREGIDO: añadí la coma faltante)
     port = int(os.environ.get("PORT", 5000))
     app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",  # Coma añadida aquí
-        secret_token=os.getenv('WEBHOOK_SECRET'),
-        drop_pending_updates=True
-    )
+    listen="0.0.0.0",
+    port=port,
+    webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
+    secret_token=os.getenv('WEBHOOK_SECRET'),
+    drop_pending_updates=True,
+    allowed_updates=Update.ALL_TYPES,
+    webhook_connect_timeout=60  # Aumenta timeout a 60 segundos (nuevo parámetro)
+)
