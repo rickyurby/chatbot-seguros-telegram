@@ -136,9 +136,20 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        # Ejecución simple sin complicaciones con el event loop
-        asyncio.run(main())
+        # Creamos una nueva política de event loop
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+        
+        # Obtenemos o creamos un event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Ejecutamos la aplicación principal
+        loop.run_until_complete(main())
+        
     except KeyboardInterrupt:
         logger.info("🛑 Aplicación detenida por el usuario")
     except Exception as e:
         logger.error(f"❌ Error fatal: {e}")
+    finally:
+        # Cerramos el event loop correctamente
+        loop.close()
