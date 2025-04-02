@@ -1,12 +1,8 @@
-# requirements.txt actualizado
-langchain==0.0.339
-langchain-community==0.0.27
-langchain-core==0.0.30
-python-telegram-bot==20.6
-openai==1.12.0
-pypdf==3.17.0
-python-dotenv==1.0.0
-faiss-cpu==1.7.4
-requests==2.31.0
-httpx==0.26.0
-numpy==1.26.4
+langchain>=0.0.348,<0.1
+langchain-community
+langchain-text-splitters
+openai
+python-dotenv
+requests
+pypdf
+python-telegram-bot
