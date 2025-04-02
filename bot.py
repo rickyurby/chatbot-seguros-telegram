@@ -90,33 +90,50 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
+    # Configura logging (asegúrate de tener esto al inicio del archivo)
+    import logging
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+    logger = logging.getLogger(__name__)
+
     port = int(os.environ.get("PORT", 5000))
     webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
 
-    # Primero definimos la función de registro
     async def register_webhook(app: Application):
-        await app.bot.set_webhook(
-            url=webhook_url,
-            secret_token=os.getenv('WEBHOOK_SECRET'),
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-        logger.info(f"✅ Webhook registrado en: {webhook_url}")
+        """Función para registrar el webhook una sola vez"""
+        try:
+            await app.bot.set_webhook(
+                url=webhook_url,
+                secret_token=os.getenv('WEBHOOK_SECRET'),
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
+            logging.info(f"✅ Webhook registrado en: {webhook_url}")
+        except Exception as e:
+            logging.error(f"❌ Error al registrar webhook: {e}")
+            raise
 
-    # Luego construimos la aplicación
+    # Construye la aplicación
     app = Application.builder() \
         .token(TOKEN) \
         .post_init(register_webhook) \
         .build()
 
-    # Handlers
+    # Registra handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Iniciamos el webhook
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        webhook_url=webhook_url,
-        secret_token=os.getenv('WEBHOOK_SECRET')
-    )
+    # Inicia el servicio
+    try:
+        logging.info("🚀 Iniciando aplicación...")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=webhook_url,
+            secret_token=os.getenv('WEBHOOK_SECRET')
+        )
+    except Exception as e:
+        logging.critical(f"💥 Error fatal: {e}")
+        raise
