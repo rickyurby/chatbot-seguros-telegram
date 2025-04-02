@@ -3,4 +3,6 @@ langchain==0.0.346
 pypdf==3.17.0
 openai==0.28.0
 python-dotenv==1.0.0
-faiss-cpu==1.7.4  # Solo si usas FAISS localmente
+faiss-cpu==1.7.4
+nltk==3.8.1
+requests==2.31.0
