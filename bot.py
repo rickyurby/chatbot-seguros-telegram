@@ -1,3 +1,6 @@
+from dotenv import load_dotenv  # Nueva importación crítica
+import os
+import requests
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -7,23 +10,20 @@ from telegram.ext import (
     ContextTypes
 )
 from pypdf import PdfReader
-import requests
-import os
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 
-# Configuración
-load_dotenv()
+# Cargar variables de entorno
+load_dotenv()  # Ahora funcionará correctamente
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 
 PDF_URLS = [
-    "https://drive.google.com/file/d/1AAqvlCYUVYxl5iRPTjCkRVcDRTFjpzq2/view?usp=drive_link",
-    "https://drive.google.com/file/d/1pFMjFmS-xlj9awXfXc3qc8Dh0xNv13cx/view?usp=drive_link",
-    "https://drive.google.com/file/d/1jviAI9BUkgVsb0dDQGvmZNXlFpVdMmxy/view?usp=drive_link"
+    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_1",
+    "https://drive.google.com/uc?export=download&id=TU_ID_PDF_2"
 ]
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -57,7 +57,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             input_documents=docs, 
             question=update.message.text
         )
-        await update.message.reply_text(f"📄 Respuesta:\n{response[:4000]}...")  # Limita a 4000 caracteres
+        await update.message.reply_text(f"📄 Respuesta:\n{response[:4000]}...")
     except Exception as e:
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
