@@ -98,6 +98,7 @@ async def register_webhook(app: Application):
         current_webhook = await app.bot.get_webhook_info()
         webhook_url = f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}"
         
+        # Solo registrar el webhook si la URL no coincide
         if current_webhook.url != webhook_url:
             await app.bot.set_webhook(
                 url=webhook_url,
@@ -105,12 +106,13 @@ async def register_webhook(app: Application):
                 allowed_updates=Update.ALL_TYPES,
                 drop_pending_updates=True
             )
-            logger.info("✅ Webhook actualizado")
+            logger.info(f"✅ Webhook registrado en: {webhook_url}")
         else:
-            logger.info("ℹ️ Webhook ya registrado")
+            logger.info("ℹ️ Webhook ya está configurado correctamente, no se necesita registrar nuevamente.")
     except Exception as e:
         logger.error(f"❌ Error al registrar webhook: {e}")
         raise
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
