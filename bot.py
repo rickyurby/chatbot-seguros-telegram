@@ -16,6 +16,12 @@ from langchain.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain.llms import OpenAI
 
+import logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
 load_dotenv()
 TOKEN = os.getenv('TELEGRAM_TOKEN')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
@@ -37,25 +43,28 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def process_pdfs():
     texts = []
-    for url in PDF_URLS:
+    for i, url in enumerate(PDF_URLS):
         try:
-            # Añade timeout y verificación SSL
-            response = requests.get(url, timeout=30, verify=True)
-            response.raise_for_status()
-            
-            # Procesamiento más rápido con chunks
-            with open("temp.pdf", "wb") as f:
-                for chunk in response.iter_content(1024):
-                    f.write(chunk)
+            logger.info(f"📄 Procesando PDF {i+1}/{len(PDF_URLS)}")
+            response = requests.get(url, timeout=60)  # Aumenta timeout
+            with open(f"temp_{i}.pdf", "wb") as f:
+                f.write(response.content)
+                
+            reader = PdfReader(f"temp_{i}.pdf")
+            for page in reader.pages[:20]:  # Limita a 20 páginas por PDF
+                if text := page.extract_text():
+                    texts.append(text)
                     
-            reader = PdfReader("temp.pdf")
-            texts.extend(page.extract_text() or "" for page in reader.pages[:50])  # Limita páginas
         except Exception as e:
-            print(f"Error procesando {url}: {str(e)}")
-            continue
+            logger.error(f"❌ Error con PDF {url}: {e}")
         finally:
-            if os.path.exists("temp.pdf"):
-                os.remove("temp.pdf")
+            if os.path.exists(f"temp_{i}.pdf"):
+                os.remove(f"temp_{i}.pdf")
+    
+    if not texts:
+        raise ValueError("No se pudo procesar ningún PDF")
+    
+    # Resto del código igual...
     
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -81,19 +90,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Error: {str(e)}")
 
 if __name__ == "__main__":
-    print(f"🔑 Webhook configurado en: {os.getenv('WEBHOOK_SECRET', '')[:3]}...")
-    print(f"🌐 URL pública: https://{os.getenv('RENDER_APP_NAME', '')}.onrender.com")
+    # Configuración avanzada del logger
+    logger = logging.getLogger(__name__)
     
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Configuración definitiva para Render (CORREGIDA)
-    port = int(os.environ.get("PORT", 5000))
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
-        secret_token=os.getenv('WEBHOOK_SECRET'),
-        drop_pending_updates=True
-    )
+    try:
+        port = int(os.environ.get("PORT", 5000))
+        app = Application.builder().token(TOKEN).build()
+        
+        # Registra handlers
+        app.add_error_handler(error_handler)
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        logger.info(f"🚀 Iniciando bot en puerto {port}")
+        
+        # Configuración mejorada del webhook
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            webhook_url=f"https://{os.getenv('RENDER_APP_NAME')}.onrender.com/{TOKEN}",
+            secret_token=os.getenv('WEBHOOK_SECRET'),
+            drop_pending_updates=True,
+            allowed_updates=Update.ALL_TYPES
+        )
+    except Exception as e:
+        logger.error(f"💥 Error crítico: {e}")
+        raise
